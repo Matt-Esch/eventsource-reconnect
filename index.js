@@ -4,6 +4,7 @@ module.exports = EventSource ? EventSourceProxy : null
 
 function EventSourceProxy(url, eventSourceInitDict) {
     var events = {}
+    var captureEvents = {}
     var source
 
     Object.defineProperties(this, {
@@ -36,22 +37,24 @@ function EventSourceProxy(url, eventSourceInitDict) {
     function withCredentials() { return source.withCredentials }
     function close() { source.close() }
 
-    function addEventListener(name, listener) {
-        var l = events[name] || []
+    function addEventListener(name, listener, capture) {
+        var eventArray = capture ? captureEvents : events
+        var l = eventArray[name] || []
         if (l.indexOf(listener) === -1) {
             l.push(listener)
-            events[name] = l
-            source.addEventListener(name, listener)
+            eventArray[name] = l
+            source.addEventListener(name, listener, !!capture)
         }
     }
 
-    function removeEventListener(name, listener) {
-        var l = events[name]
+    function removeEventListener(name, listener, capture) {
+        var eventArray = capture ? captureEvents : events
+        var l = eventArray[name]
         if (l) {
             var index = l.indexOf(listener)
             if (index !== -1) {
                 l.splice(index, 1)
-                source.removeEventListener(name, listener)
+                source.removeEventListener(name, listener, !!capture)
             }
         }
     }
