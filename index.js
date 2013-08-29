@@ -1,4 +1,4 @@
-var EventSource = require("global/window").EventSource
+var EventSource = require("event-source")
 
 module.exports = EventSource ? EventSourceProxy : null
 
@@ -25,11 +25,11 @@ function EventSourceProxy(url, eventSourceInitDict) {
     function connect(u, e) {
         if (source) {
             source.close()
-            unbindHandlers(source, events)
+            unbindHandlers(source, events, captureEvents)
         }
 
         source = new EventSource(u || url, e || eventSourceInitDict)
-        bindHandlers(this, source, events)
+        bindHandlers(this, source, events, captureEvents)
     }
 
     function getUrl() { return source.url }
@@ -58,9 +58,9 @@ function EventSourceProxy(url, eventSourceInitDict) {
             }
         }
     }
-}
 
-function unbindHandlers(source, events) {
+}
+function unbindHandlers(source, events, captureEvents) {
     source.onopen = null
     source.onmessage = null
     source.onerror = null
@@ -68,13 +68,21 @@ function unbindHandlers(source, events) {
     if (events) {
         Object.keys(events).forEach(function (name) {
             events[name].forEach(function (listener) {
-                source.removeEventListener(name, listener)
+                source.removeEventListener(name, listener, false)
+            })
+        })
+    }
+
+    if (captureEvents) {
+        Object.keys(captureEvents).forEach(function (name) {
+            captureEvents[name].forEach(function (listener) {
+                source.removeEventListener(name, listener, true)
             })
         })
     }
 }
 
-function bindHandlers(proxy, source, events) {
+function bindHandlers(proxy, source, events, captureEvents) {
     source.onopen = proxyHandler(proxy, "onopen")
     source.onmessage = proxyHandler(proxy, "onclose")
     source.onerror = proxyHandler(proxy, "onerror")
@@ -82,7 +90,15 @@ function bindHandlers(proxy, source, events) {
     if (events) {
         Object.keys(events).forEach(function (name) {
             events[name].forEach(function (listener) {
-                source.addEventListener(name, listener)
+                source.addEventListener(name, listener, false)
+            })
+        })
+    }
+
+    if (captureEvents) {
+        Object.keys(captureEvents).forEach(function (name) {
+            captureEvents[name].forEach(function (listener) {
+                source.addEventListener(name, listener, true)
             })
         })
     }
